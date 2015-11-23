@@ -1,0 +1,130 @@
+# tasks file for nisclient
+---
+# Tasks for nis/yp clients
+
+- yum: "name={{ item }} 
+        state=present"
+  with_items:
+  - ypbind
+  - rpcbind
+  when: ansible_os_family == 'RedHat'
+
+- name: Set YPBINDDIR 64-bit location
+  lineinfile: dest=/var/yp/Makefile
+                   backup=yes
+                   state=present
+                   line="YPBINDIR = /usr/lib{{ansible_userspace_bits}}/yp"
+  when: ansible_os_family == 'Slackware'
+
+- name: Make ypbind start in non-broadcast mode
+  lineinfile: dest='/etc/rc.d/rc.yp'
+                   state=present
+                   backup=yes
+                   backrefs=yes
+                   regexp='/usr/sbin/ypbind -broadcast'
+                   line='/usr/sbin/ypbind'
+  when: ansible_os_family == "Slackware"
+
+- name: Insert domain into /etc/yp.conf files
+  lineinfile: dest=/etc/yp.conf
+                   backup=yes
+                   state=present
+                   insertafter=EOF
+                   line="domain {{ nisdomain }} server {{ nismasterip }}"
+
+- name: Insert domain into /etc/sysconfig/network file
+  lineinfile: "dest=/etc/sysconfig/network
+                   backup=yes
+                   state=present
+                   insertafter=EOF
+                   line='NISDOMAIN={{ nisdomain }}'"
+  when: ansible_os_family == 'RedHat'
+
+#These are fully quoted because colons break yml
+- name: Make sure NIS/YP lines are in passwd file
+  lineinfile: "dest=/etc/passwd backup=yes state=present 
+               line='+:*:::::/bin/false' insertafter=EOF"
+- name: Make sure NIS/YP lines are in shadow file
+  lineinfile: "dest=/etc/shadow backup=yes state=present 
+                line='+::::::::' insertafter=EOF"
+- name: Make sure NIS/YP lines are in group file
+  lineinfile: "dest=/etc/group backup=yes state=present
+                line='+:::' insertafter=EOF"
+
+- name: Fix nsswitch.conf lines
+  lineinfile: 'dest=/etc/nsswitch.conf
+                    backup=yes
+                    state=present
+                    backrefs=yes
+                    regexp="^(group.*compat.*)$"
+                    line="#\1"'
+- lineinfile: 'dest=/etc/nsswitch.conf
+                    state=present
+                    backup=yes
+                    backrefs=yes
+                    regexp="^(passwd.*compat.*)$"
+                    line=:"#\1"'
+- lineinfile: 'dest=/etc/nsswitch.conf
+                    state=present
+                    backup=yes
+                    backrefs=yes
+                    regexp="^#.*(passwd.*files).*$"
+                    line="\1 nisplus nis"'
+- lineinfile: dest=/etc/nsswitch.conf
+                    state=present
+                    backup=yes
+                    backrefs=yes
+                    regexp='^#.*(shadow.*files).*$'
+                    line='\1 nisplus nis'
+- lineinfile: dest=/etc/nsswitch.conf
+                    state=present
+                    backup=yes
+                    backrefs=yes
+                    regexp='^#.*(group.*files).*$'
+                    line='\1 nisplus nis'
+- name: Make sure correct nsswitch.conf lines are present
+  lineinfile: 'dest=/etc/nsswitch.conf
+                backup=yes
+                state=present
+                line="passwd:         files nisplus nis"'
+- lineinfile: 'dest=/etc/nsswitch.conf
+                backup=yes
+                state=present
+                line="shadow:         files nisplus nis"'
+- lineinfile: 'dest=/etc/nsswitch.conf
+                backup=yes
+                state=present
+                line="group:          files nisplus nis"'
+
+- name: Make sure incorrect nsswitch.conf lines are absent
+  lineinfile: 'dest=/etc/nsswitch.conf
+                backup=yes
+                state=absent
+                line="{{ item }}"'
+  with_items:
+    - '^passwd.*compat.*$'
+    - '^group.*compat.*$'
+
+
+- name: set up authconfig to use NIS
+  shell: authconfig --enable-nis 
+          --nis-domain={{nisdomain}} 
+          --nis-server={{nismasterip}}
+          --update
+  when: ansible_os_family == 'RedHat'
+
+- name: Make sure YP is executable
+  file: path=/etc/rc.d/rc.yp mode=0755
+  when: ansible_os_family == 'Slackware'
+
+- name: Make sure RPC is executable
+  file: path=/etc/rc.d/rc.rpc mode=0755
+  when: ansible_os_family == 'Slackware'
+
+- name: Start YP client services
+  shell: /etc/rc.d/rc.yp start
+  when: ansible_os_family == 'Slackware'
+
+- name: Start RPC client services
+  shell: /etc/rc.d/rc.rpc start
+  when: ansible_os_family == 'Slackware'
