@@ -2,10 +2,10 @@
 ---
 # Tasks for nis/yp clients
 
-- yum: name={{ item }} state=present
+- package: name="{{ item }}" state=present
   with_items:
-  - ypbind
-  - rpcbind
+    - ypbind
+    - rpcbind
 
 - name: set up authconfig to use NIS
   shell: authconfig --enable-nis 
