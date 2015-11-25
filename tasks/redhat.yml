@@ -2,13 +2,21 @@
 ---
 # Tasks for nis/yp clients
 
-- yum: "name={{ item }} 
-        state=present"
+- yum: name={{ item }} state=present
   with_items:
   - ypbind
   - rpcbind
-  when: ansible_os_family == 'RedHat'
 
+- name: set up authconfig to use NIS
+  shell: authconfig --enable-nis 
+          --nis-domain={{nisdomain}} 
+          --nis-server={{nismasterip}}
+          --update
+  notify:
+  - enableyp
+  - enablerpc
+  - startyp
+  - startrpc
 #- name: Set YPBINDDIR 64-bit location
 #  lineinfile: dest=/var/yp/Makefile
 #                   backup=yes
@@ -95,15 +103,3 @@
 #  with_items:
 #    - '^passwd.*compat.*$'
 #    - '^group.*compat.*$'
-
-- name: set up authconfig to use NIS
-  shell: authconfig --enable-nis 
-          --nis-domain={{nisdomain}} 
-          --nis-server={{nismasterip}}
-          --update
-  when: ansible_os_family == 'RedHat'
-  notify:
-  - enableyp
-  - enablerpc
-  - startyp
-  - startrpc
