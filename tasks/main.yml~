@@ -1,9 +1,0 @@
----
-# tasks file for nisclient
----
-# Tasks for nis/yp clients
-- include: redhat.yml
-  when: ansible_os_family == 'RedHat'
-
-- include: slackware.yml
-  when: ansible_os_family == 'Slackware'
