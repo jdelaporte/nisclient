@@ -1,7 +1,6 @@
 # tasks file for nisclient
 ---
 # Tasks for nis/yp clients
-- selinux: state=disabled
 
 - yum: name="{{ item }}" state=present
   with_items:
@@ -9,16 +8,18 @@
     - rpcbind
     - libselinux-python
 
+- selinux: state=disabled
+
 - name: set up authconfig to use NIS
   shell: '/sbin/authconfig --enablenis 
           --nisdomain="{{ nisdomain }}"
           --nisserver="{{ nismasterip }}"
           --update'
   notify:
-    - enableyp
-    - enablerpc
-    - startyp
-    - startrpc
+    - enableypbind
+    - enablerpcbind
+    - startypbind
+    - startrpcbind
 
 #- name: Set YPBINDDIR 64-bit location
 #  lineinfile: dest=/var/yp/Makefile
