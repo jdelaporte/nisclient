@@ -2,13 +2,13 @@
 # handlers file for nisclient
 #
 - name: enableyp
-  service: name=yp state=enabled
+  service: name=yp enabled=yes
 
 - name: startyp
   service: name=yp state=started
 
 - name: enablerpc
-  service: name=rpc state=enabled
+  service: name=rpc enabled=yes
 
 - name: startrpc
   service: name=rpc state=started
